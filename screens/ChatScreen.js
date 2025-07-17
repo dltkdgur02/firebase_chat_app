@@ -28,7 +28,7 @@ const ChatScreen = ({ route }) => {
                 timestamp: Date.now(),
             });
             setMessage('');
-            flatListRef.current?.scrollToEnd({ animated: true });
+            cdtListRef.current?.scrollToEnd({ animated: true });
         }
     };
 
@@ -37,6 +37,29 @@ const ChatScreen = ({ route }) => {
         remove(messageRef);
         setMessages((prev) => prev.filter((msg) => msg.key !== messageKey));
     };
+
+    const handleDeleteChatRoom = async () => {
+        Alert.alert(
+            '채팅방 삭제',
+            '채팅방의 모든 메시지를 삭제하시겠습니까?',
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '삭제',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await remove(ref(db, 'messages/'));
+                            setMessages([]); // 로컬에서도 초기화
+                        } catch (err) {
+                            Alert.alert('삭제 실패', err.message);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
 
     const renderItem = ({ item }) => (
         <MessageItem
@@ -56,7 +79,20 @@ const ChatScreen = ({ route }) => {
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.container}
+        >
+            {/* 🔴 상단에 고정된 채팅방 삭제 버튼 */}
+            <View style={styles.header}>
+                <Button
+                    title="채팅방 삭제"
+                    onPress={handleDeleteChatRoom}
+                    color="red"
+                />
+            </View>
+
+            {/* 채팅 목록 */}
             <FlatList
                 ref={flatListRef}
                 data={messages}
@@ -65,8 +101,12 @@ const ChatScreen = ({ route }) => {
                 )}
                 keyExtractor={(item) => item.key}
                 style={styles.list}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                onContentSizeChange={() =>
+                    flatListRef.current?.scrollToEnd({ animated: true })
+                }
             />
+
+            {/* 입력창 */}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
@@ -79,10 +119,15 @@ const ChatScreen = ({ route }) => {
             </View>
         </KeyboardAvoidingView>
     );
+
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 10 },
+    header: {
+        marginBottom: 10,
+        alignItems: 'flex-end',
+    },
     list: { flex: 1 },
     inputContainer: {
         flexDirection: 'row',
@@ -100,5 +145,6 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
 });
+
 
 export default ChatScreen;
