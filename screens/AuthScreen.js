@@ -15,7 +15,7 @@ const AuthScreen = ({ navigation }) => {
             } else {
                 await createUserWithEmailAndPassword(auth, email, pw);
             }
-            navigation.replace('Rooms', { nickname: email.split('@')[0] });
+            navigation.replace('RoomList', { nickname: email.split('@')[0] });
         } catch (error) {
             Alert.alert('오류', error.message);
         }

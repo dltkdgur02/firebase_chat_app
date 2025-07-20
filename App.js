@@ -11,9 +11,9 @@ export default function App() {
     return (
         <NavigationContainer>
             <Stack.Navigator initialRouteName="Auth">
-                <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
-                <Stack.Screen name="Rooms" component={RoomListScreen} options={{ title: '채팅방 목록' }} />
-                <Stack.Screen name="Chat" component={ChatScreen} options={({ route }) => ({ title: route.params.roomName })} />
+                <Stack.Screen name="Auth" component={AuthScreen} options={{ title: '로그인' }} />
+                <Stack.Screen name="RoomList" component={RoomListScreen} options={{ title: '채팅방 목록' }} />
+                <Stack.Screen name="Chat" component={ChatScreen} options={({ route }) => ({ title: route.params?.roomName || '채팅방' })} />
             </Stack.Navigator>
         </NavigationContainer>
     );

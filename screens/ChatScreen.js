@@ -5,6 +5,7 @@ import {
 import { ref, push, onChildAdded, remove } from 'firebase/database';
 import { db } from '../firebaseConfig';
 import MessageItem from '../components/MessageItem';
+import { Alert } from 'react-native'; // 필요 시 추가
 
 const ChatScreen = ({ route }) => {
     const { nickname, roomId } = route.params;
@@ -28,7 +29,7 @@ const ChatScreen = ({ route }) => {
                 timestamp: Date.now(),
             });
             setMessage('');
-            cdtListRef.current?.scrollToEnd({ animated: true });
+            flatListRef.current?.scrollToEnd({ animated: true }); // 오타 수정됨
         }
     };
 
@@ -41,7 +42,7 @@ const ChatScreen = ({ route }) => {
     const handleDeleteChatRoom = async () => {
         Alert.alert(
             '채팅방 삭제',
-            '채팅방의 모든 메시지를 삭제하시겠습니까?',
+            '이 채팅방과 모든 메시지를 삭제하시겠습니까?',
             [
                 { text: '취소', style: 'cancel' },
                 {
@@ -49,8 +50,11 @@ const ChatScreen = ({ route }) => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await remove(ref(db, 'messages/'));
-                            setMessages([]); // 로컬에서도 초기화
+                            // 해당 채팅방의 메시지와 방 자체 삭제
+                            await remove(ref(db, `messages/${roomId}`));
+                            await remove(ref(db, `rooms/${roomId}`));
+                            setMessages([]);
+                            navigation.goBack(); // 방 삭제 후 이전 화면으로
                         } catch (err) {
                             Alert.alert('삭제 실패', err.message);
                         }
@@ -59,6 +63,7 @@ const ChatScreen = ({ route }) => {
             ]
         );
     };
+
 
 
     const renderItem = ({ item }) => (
