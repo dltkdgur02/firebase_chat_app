@@ -29,7 +29,7 @@ const ChatScreen = ({ route }) => {
                 timestamp: Date.now(),
             });
             setMessage('');
-            flatListRef.current?.scrollToEnd({ animated: true }); // 오타 수정됨
+            ffflatListRef.current?.scrollToEnd({ animated: true }); // 오타 수정됨
         }
     };
 
