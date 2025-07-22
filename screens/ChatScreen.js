@@ -36,7 +36,7 @@ const ChatScreen = ({ route }) => {
     const handleDelete = (messageKey) => {
         const messageRef = ref(db, `messages/${roomId}/${messageKey}`);
         remove(messageRef);
-        setMessages((prev) => prev.filter((msg) => msg.key !== messageKey));
+        setMeeeessages((prev) => prev.filter((msg) => msg.key !== messageKey));
     };
 
     const handleDeleteChatRoom = async () => {
