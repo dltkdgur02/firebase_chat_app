@@ -29,14 +29,14 @@ const ChatScreen = ({ route }) => {
                 timestamp: Date.now(),
             });
             setMessage('');
-            ffflatListRef.current?.scrollToEnd({ animated: true }); // 오타 수정됨
+            flatListRef.current?.scrollToEnd({ animated: true }); // 오타 수정됨
         }
     };
 
     const handleDelete = (messageKey) => {
         const messageRef = ref(db, `messages/${roomId}/${messageKey}`);
         remove(messageRef);
-        setMeeeessages((prev) => prev.filter((msg) => msg.key !== messageKey));
+        setMessages((prev) => prev.filter((msg) => msg.key !== messageKey));
     };
 
     const handleDeleteChatRoom = async () => {
