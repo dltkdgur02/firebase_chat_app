@@ -13,7 +13,7 @@ export default function App() {
             <Stack.Navigator initialRouteName="Auth">
                 <Stack.Screen name="Auth" component={AuthScreen} options={{ title: '로그인' }} />
                 <Stack.Screen name="RoomList" component={RoomListScreen} options={{ title: '채팅방 목록' }} />
-                <Stack.Screen name="Chat" component={ChatScreen} options={({ route }) => ({ title: route.params?.roomName || '채팅방' })} />
+                <Stack.Screen name="ChatScreen" component={ChatScreen} options={({ route }) => ({ title: route.params?.roomName || '채팅방' })} />
             </Stack.Navigator>
         </NavigationContainer>
     );

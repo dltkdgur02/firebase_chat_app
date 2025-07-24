@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 
+
 const firebaseConfig = {
     apiKey: 'AIzaSyDpBFvNvt_cffkMd-ARLk0QK9Cx0yJjPOY',
     authDomain: 'YOUR_AUTH_DOMAIN',
@@ -14,6 +15,5 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+export const rtdb = getDatabase(app); //Realtime Database 전용
 export const auth = getAuth(app);
-
