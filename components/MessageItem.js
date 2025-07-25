@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { Image, View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 
 const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -22,29 +22,45 @@ const MessageItem = ({ message, isMe, onDelete }) => {
 
     return (
         <TouchableOpacity onLongPress={handleLongPress}>
-            <View style={[styles.message, isMe ? styles.me : styles.other]}>
-                <Text style={styles.name}>{message.name}</Text>
-                <Text>{message.text}</Text>
-                <Text style={styles.time}>{formatTime(message.timestamp)}</Text>
+            <View style={[styles.messageWrapper, isMe ? styles.me : styles.other]}>
+                {!isMe && message.photoUrl && (
+                    <Image source={{ uri: message.photoUrl }} style={styles.avatar} />
+                )}
+                <View style={styles.message}>
+                    <Text style={styles.name}>{message.name}</Text>
+                    <Text>{message.text}</Text>
+                    <Text style={styles.time}>{formatTime(message.timestamp)}</Text>
+                </View>
             </View>
         </TouchableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
+    messageWrapper: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 8,
+    },
+    avatar: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        marginRight: 8,
+        marginTop: 4,
+    },
     message: {
         padding: 10,
         borderRadius: 5,
-        marginBottom: 8,
         maxWidth: '80%',
+        backgroundColor: '#f8d7da',
     },
     me: {
         alignSelf: 'flex-end',
-        backgroundColor: '#d1e7dd',
+        flexDirection: 'row-reverse',
     },
     other: {
         alignSelf: 'flex-start',
-        backgroundColor: '#f8d7da',
     },
     name: {
         fontWeight: 'bold',

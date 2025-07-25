@@ -1,16 +1,69 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
-    View, Text, TextInput, Button, FlatList, StyleSheet, KeyboardAvoidingView, Platform
+    View,
+    TextInput,
+    Button,
+    FlatList,
+    StyleSheet,
+    KeyboardAvoidingView,
+    Platform,
+    Alert,
+    Text,
 } from 'react-native';
-import { ref, push, onChildAdded, remove, set } from 'firebase/database';
+import { ref, push, onChildAdded, remove, onValue, update } from 'firebase/database';
 import { rtdb } from '../firebaseConfig';
 import MessageItem from '../components/MessageItem';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { auth } from '../firebaseConfig';
+import { get } from 'firebase/database';
 
-const ChatScreen = ({ route }) => {
+const ChatScreen = ({ route, navigation }) => {
     const { nickname, roomId } = route.params;
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState([]);
     const flatListRef = useRef(null);
+    const [myProfile, setMyProfile] = useState({ name: '', photoUrl: null });
+
+    useEffect(() => {
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+
+        const userRef = ref(rtdb, `users/${uid}`);
+        get(userRef).then((snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                setMyProfile({
+                    name: data.name || '',
+                    photoUrl: data.photoUrl || '',
+                });
+            }
+        });
+    }, []);
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <Button title="☰" onPress={() => navigation.navigate('Profile')} />
+            ),
+        });
+    }, [navigation]);
+
+    const handleChangeRoomName = () => {
+        Alert.prompt(
+            '채팅방 이름 변경',
+            '새 채팅방 이름을 입력하세요:',
+            async (newName) => {
+                if (!newName) return;
+                try {
+                    await update(ref(rtdb, `rooms/${roomId}`), { name: newName });
+                    navigation.setOptions({ title: newName });
+                } catch (err) {
+                    Alert.alert('오류', err.message);
+                }
+            }
+        );
+    };
 
     useEffect(() => {
         const messagesRef = ref(rtdb, `messages/${roomId}/`);
@@ -24,13 +77,15 @@ const ChatScreen = ({ route }) => {
         if (message.trim()) {
             const now = Date.now();
             await push(ref(rtdb, `messages/${roomId}/`), {
-                name: nickname,
+                name: myProfile.name,
+                photoUrl: myProfile.photoUrl,
                 text: message,
                 timestamp: now,
             });
-            // ✅ 채팅방에 최신 메시지 시간 갱신
-            await set(ref(rtdb, `rooms/${roomId}/lastMessageTime`), now);
-
+            await update(ref(rtdb, `rooms/${roomId}`), {
+                lastMessageTime: now,
+                lastMessageText: message,
+            });
             setMessage('');
             flatListRef.current?.scrollToEnd({ animated: true });
         }
@@ -42,30 +97,50 @@ const ChatScreen = ({ route }) => {
         setMessages((prev) => prev.filter((msg) => msg.key !== messageKey));
     };
 
-    const formatDate = (timestamp) => {
-        const date = new Date(timestamp);
-        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+    const groupMessagesByDate = (messages) => {
+        let grouped = [];
+        let lastDate = null;
+        let dateId = 0; // ✅ 날짜 항목에 대한 고유 id 부여
+
+        messages.forEach((msg) => {
+            const msgDate = format(new Date(msg.timestamp), 'yyyy년 MM월 dd일 (E)', { locale: ko });
+
+            // 날짜가 바뀌었을 때만 날짜 라벨 추가
+            if (msgDate !== lastDate) {
+                grouped.push({
+                    key: `date-${dateId++}`, // ✅ 고유 key 보장
+                    type: 'date',
+                    date: msgDate,
+                });
+                lastDate = msgDate;
+            }
+
+            // 메시지는 고유 Firebase 키 사용
+            grouped.push({
+                ...msg,
+                type: 'message',
+                key: msg.key, // ✅ 기존 메시지 키 유지
+            });
+        });
+
+        return grouped;
     };
 
-    let lastDate = null;
     const renderItem = ({ item }) => {
-        const currentDate = formatDate(item.timestamp);
-        const showDateHeader = currentDate !== lastDate;
-        lastDate = currentDate;
+        if (item.type === 'date') {
+            return (
+                <View style={styles.dateContainer}>
+                    <Text style={styles.dateText}>{item.date}</Text>
+                </View>
+            );
+        }
 
         return (
-            <View>
-                {showDateHeader && (
-                    <View style={styles.dateHeader}>
-                        <Text style={styles.dateHeaderText}>{currentDate}</Text>
-                    </View>
-                )}
-                <MessageItem
-                    message={item}
-                    isMe={item.name === nickname}
-                    onDelete={() => handleDelete(item.key)}
-                />
-            </View>
+            <MessageItem
+                message={item}
+                isMe={item.name === nickname}
+                onDelete={() => handleDelete(item.key)}
+            />
         );
     };
 
@@ -75,15 +150,11 @@ const ChatScreen = ({ route }) => {
             style={styles.container}
         >
             <FlatList
-                ref={flatListRef}
-                data={messages}
+                data={groupMessagesByDate(messages)}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.key}
-                style={styles.list}
-                onContentSizeChange={() =>
-                    flatListRef.current?.scrollToEnd({ animated: true })
-                }
             />
+
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
@@ -116,17 +187,14 @@ const styles = StyleSheet.create({
         padding: 10,
         marginRight: 8,
     },
-    dateHeader: {
+    dateContainer: {
         alignItems: 'center',
-        marginVertical: 10,
+        marginVertical: 12,
     },
-    dateHeaderText: {
-        backgroundColor: '#eee',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 12,
-        fontSize: 12,
-        color: '#555',
+    dateText: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#666',
     },
 });
 

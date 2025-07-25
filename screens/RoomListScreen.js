@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useLayoutEffect } from 'react';
+// RoomListScreen.js
+import React, { useEffect, useState, useLayoutEffect} from 'react';
 import {
     View,
     Text,
@@ -7,49 +8,30 @@ import {
     Alert,
     StyleSheet,
     TextInput,
-    Button,
 } from 'react-native';
 import { ref, onValue, remove, push } from 'firebase/database';
-import { signOut } from 'firebase/auth';
-import { rtdb, auth } from '../firebaseConfig';
+import { rtdb } from '../firebaseConfig';
+import { auth } from '../firebaseConfig';
 
 const RoomListScreen = ({ navigation, route }) => {
     const [rooms, setRooms] = useState([]);
     const [newRoomName, setNewRoomName] = useState('');
-    const { nickname } = route.params;
+    const nickname = route.params?.nickname || '익명';
 
-    // ✅ 우측 상단 로그아웃 버튼 설정
-    useLayoutEffect(() => {
-        navigation.setOptions({
-            headerRight: () => (
-                <Button title="로그아웃" onPress={handleLogout} color="red" />
-            ),
-        });
-    }, [navigation]);
-
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            navigation.replace('Auth');
-        } catch (e) {
-            Alert.alert('로그아웃 실패', e.message);
-        }
-    };
 
     useEffect(() => {
         const roomsRef = ref(rtdb, 'rooms');
         const unsubscribe = onValue(roomsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                const roomList = Object.entries(data).map(([id, value]) => ({
-                    id,
-                    name: value.name,
-                    lastMessageTime: value.lastMessageTime || 0,
-                }));
-
-                // ✅ 최신 메시지 순 정렬
-                roomList.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-
+                const roomList = Object.entries(data)
+                    .map(([id, value]) => ({
+                        id,
+                        name: value.name,
+                        lastMessageText: value.lastMessageText || '',
+                        lastMessageTime: value.lastMessageTime || 0,
+                    }))
+                    .sort((a, b) => b.lastMessageTime - a.lastMessageTime);
                 setRooms(roomList);
             } else {
                 setRooms([]);
@@ -58,6 +40,26 @@ const RoomListScreen = ({ navigation, route }) => {
 
         return () => unsubscribe();
     }, []);
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                    <Text style={{ color: '#007AFF', marginRight: 10 }}>프로필</Text>
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation]);
+
+    const formatTime = (timestamp) => {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        const hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const period = hours < 12 ? '오전' : '오후';
+        const formattedHours = hours % 12 || 12;
+        return `${period} ${formattedHours}:${minutes}`;
+    };
 
     const handleDeleteRoom = (roomId) => {
         Alert.alert(
@@ -88,6 +90,7 @@ const RoomListScreen = ({ navigation, route }) => {
         try {
             await push(ref(rtdb, 'rooms'), {
                 name: newRoomName.trim(),
+                lastMessageTime: Date.now(),
             });
             setNewRoomName('');
         } catch (e) {
@@ -100,14 +103,16 @@ const RoomListScreen = ({ navigation, route }) => {
             <TouchableOpacity
                 style={{ flex: 1 }}
                 onPress={() =>
-                    navigation.navigate('ChatScreen', {
+                    navigation.navigate('Chat', {
                         roomId: item.id,
                         roomName: item.name,
-                        nickname: nickname,
+                        nickname,
                     })
                 }
             >
                 <Text style={styles.roomName}>{item.name}</Text>
+                <Text style={styles.preview} numberOfLines={1}>{item.lastMessageText}</Text>
+                <Text style={styles.time}>{formatTime(item.lastMessageTime)}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleDeleteRoom(item.id)}>
                 <Text style={styles.deleteButton}>삭제</Text>
@@ -117,7 +122,6 @@ const RoomListScreen = ({ navigation, route }) => {
 
     return (
         <View style={styles.container}>
-            {/* 채팅방 생성 영역 */}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
@@ -130,7 +134,6 @@ const RoomListScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
             </View>
 
-            {/* 채팅방 목록 */}
             <FlatList
                 data={rooms}
                 keyExtractor={(item) => item.id}
@@ -167,7 +170,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
     },
-    roomName: { fontSize: 18 },
+    roomName: { fontSize: 18, fontWeight: 'bold' },
+    preview: { fontSize: 14, color: '#555' },
+    time: { fontSize: 12, color: '#888' },
     deleteButton: { color: 'red', marginLeft: 10 },
     separator: { height: 1, backgroundColor: '#ccc' },
 });
