@@ -35,27 +35,12 @@ const ProfileScreen = () => {
     // 갤러리에서 이미지 선택
     const handlePickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ImagePicker.MediaType.IMAGE,
             quality: 0.5,
         });
 
         if (!result.canceled) {
             setPhotoUrl(result.assets[0].uri);
-        }
-    };
-
-    // 이미지 Firebase Storage 업로드
-    const uploadImageAsync = async (uri, uid) => {
-        try {
-            const response = await fetch(uri);
-            const blob = await response.blob();
-            const fileRef = storageRef(storage, `profiles/${uid}.jpg`);
-            await uploadBytes(fileRef, blob);
-            const downloadUrl = await getDownloadURL(fileRef);
-            return downloadUrl;
-        } catch (error) {
-            console.error('🔥 Storage Upload Error:', error);  // 콘솔에 정확한 원인 확인
-            throw error;
         }
     };
 
@@ -68,11 +53,6 @@ const ProfileScreen = () => {
 
         try {
             let uploadedUrl = photoUrl;
-
-            // file:// 로컬 파일이면 업로드 처리
-            if (photoUrl && photoUrl.startsWith('file://')) {
-                uploadedUrl = await uploadImageAsync(photoUrl, uid);
-            }
 
             await set(dbRef(rtdb, `users/${uid}`), {
                 name,
